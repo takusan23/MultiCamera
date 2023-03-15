@@ -68,7 +68,10 @@ class MainActivity : ComponentActivity(), SurfaceTexture.OnFrameAvailableListene
     private val previewSurfaceTexture = arrayListOf<SurfaceTexture>()
 
     /** onFrameAvailable が呼ばれたら +1 していく */
-    private var latestUpdateCount = 0L
+    private var unUsedFrameCount = 0L
+
+    /** updateTexUpdate を呼んだら +1 していく */
+    private var usedFrameCount = 0L
 
     /** カメラ用スレッド */
     private var cameraJob: Job? = null
@@ -134,7 +137,7 @@ class MainActivity : ComponentActivity(), SurfaceTexture.OnFrameAvailableListene
 
     override fun onFrameAvailable(surfaceTexture: SurfaceTexture?) {
         // 更新を通知するため、値を更新する
-        latestUpdateCount++
+        unUsedFrameCount++
     }
 
     override fun onResume() {
@@ -291,17 +294,17 @@ class MainActivity : ComponentActivity(), SurfaceTexture.OnFrameAvailableListene
             // ここで行う理由ですが、makeCurrent したスレッドでないと glDrawArray できない？ + onFrameAvailable が UIスレッド なので重たいことはできないためです。
             // ただ、レンダリングするタイミングは onFrameAvailable が更新されたタイミングなので、
             // while ループを回して 新しいフレームが来ているか確認しています。
-            var prevUpdateCount = 0L
             while (isActive) {
-                if (latestUpdateCount != prevUpdateCount) {
+                // OpenGL の描画よりも onFrameAvailable の更新のほうが早い？ため、更新が追いついてしまう
+                // そのため、消費したフレームとまだ消費していないフレームを比較するようにした
+                // https://stackoverflow.com/questions/14185661
+                if (unUsedFrameCount != usedFrameCount) {
                     glSurfaceList.forEach {
                         it.makeCurrent() // 多分いる
                         it.drawFrame()
                         it.swapBuffers()
                     }
-                    prevUpdateCount = latestUpdateCount
-                }else{
-                    println("なんと！ = ${latestUpdateCount}")
+                    usedFrameCount += 2 // メイン映像とサブ映像で2つ
                 }
             }
         }
