@@ -32,6 +32,20 @@ class CameraControl(
     private val cameraExecutor = Executors.newSingleThreadExecutor()
     private var cameraDevice: CameraDevice? = null
 
+    private var captureRequest: CaptureRequest.Builder? = null
+    private var currentCaptureSession: CameraCaptureSession? = null
+    private val outputList = buildList {
+        add(OutputConfiguration(previewSurface))
+        add(OutputConfiguration(captureSurface))
+    }
+
+    /** ズーム出来る値の範囲を返す */
+    val zoomRange: ClosedFloatingPointRange<Float>
+        get() = cameraManager.getCameraCharacteristics(cameraId)?.get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE)?.let {
+            // Pixel 6 Pro の場合は 0.6704426..20.0 のような値になる
+            it.lower..it.upper
+        } ?: 0f..0f
+
     /** カメラを開く */
     suspend fun openCamera() {
         cameraDevice = waitOpenCamera()
@@ -40,26 +54,34 @@ class CameraControl(
     /** カメラを開始する */
     fun startCamera() {
         val cameraDevice = cameraDevice ?: return
-        val captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
-            addTarget(previewSurface)
-            addTarget(captureSurface)
-            //set(CaptureRequest.CONTROL_ZOOM_RATIO, 5f)
-//            println(cameraManager.getCameraCharacteristics(cameraId).get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE))
-
-        }.build()
-        val outputList = buildList {
-            add(OutputConfiguration(previewSurface))
-            add(OutputConfiguration(captureSurface))
+        if (captureRequest == null) {
+            captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
+                addTarget(previewSurface)
+                addTarget(captureSurface)
+            }
         }
         SessionConfiguration(SessionConfiguration.SESSION_REGULAR, outputList, cameraExecutor, object : CameraCaptureSession.StateCallback() {
             override fun onConfigured(captureSession: CameraCaptureSession) {
-                captureSession.setRepeatingRequest(captureRequest, null, null)
+                currentCaptureSession = captureSession
+                captureSession.setRepeatingRequest(captureRequest!!.build(), null, null)
             }
 
             override fun onConfigureFailed(p0: CameraCaptureSession) {
                 // do nothing
             }
         }).apply { cameraDevice.createCaptureSession(this) }
+    }
+
+    /**
+     * ズームする
+     * [startCamera]を呼び出した後のみ利用可能
+     */
+    fun zoom(zoom: Float = 1f) {
+        val captureRequest = captureRequest ?: return
+        val currentCaptureSession = currentCaptureSession ?: return
+
+        captureRequest.set(CaptureRequest.CONTROL_ZOOM_RATIO, zoom)
+        currentCaptureSession.setRepeatingRequest(captureRequest.build(), null, null)
     }
 
     /** 終了時に呼び出す */
@@ -69,7 +91,7 @@ class CameraControl(
 
     /** [cameraId]のカメラを開く */
     @SuppressLint("MissingPermission")
-    suspend private fun waitOpenCamera() = suspendCoroutine {
+    private suspend fun waitOpenCamera() = suspendCoroutine {
         cameraManager.openCamera(cameraId, cameraExecutor, object : CameraDevice.StateCallback() {
             override fun onOpened(camera: CameraDevice?) {
                 it.resume(camera)

@@ -19,12 +19,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -107,6 +109,13 @@ class MainActivity : ComponentActivity(), SurfaceTexture.OnFrameAvailableListene
         window.attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
 
         setContent {
+            val zoomValue = remember { mutableStateOf(1f) }
+            val zoomRange = remember { mutableStateOf(0f..1f) }
+            SideEffect {
+                // 非 Compose なコードので若干違和感
+                zoomRange.value = cameraControlList.firstOrNull()?.zoomRange ?: 0f..1f
+            }
+
             Box(
                 modifier = Modifier
                     .background(Color.Black)
@@ -125,12 +134,25 @@ class MainActivity : ComponentActivity(), SurfaceTexture.OnFrameAvailableListene
                         ),
                     factory = { surfaceView }
                 )
-                Button(
+                Column(
                     modifier = Modifier
-                        .padding(bottom = 30.dp)
+                        .padding(bottom = 50.dp)
                         .align(Alignment.BottomCenter),
-                    onClick = { capture() }
-                ) { Text(text = "撮影 録画 する") }
+                ) {
+                    Slider(
+                        value = zoomValue.value,
+                        valueRange = zoomRange.value,
+                        onValueChange = {
+                            zoomValue.value = it
+                            // 前面カメラ は最初
+                            cameraControlList.first().zoom(it)
+                        }
+                    )
+                    Button(
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        onClick = { capture() }
+                    ) { Text(text = "撮影 録画 する") }
+                }
             }
         }
     }
