@@ -61,8 +61,8 @@ class MainActivity : ComponentActivity(), SurfaceTexture.OnFrameAvailableListene
     /** 生成した [GLSurface] */
     private val glSurfaceList = arrayListOf<GLSurface>()
 
-    /** 利用中の [CameraItem] */
-    private val cameraItemList = arrayListOf<CameraItem>()
+    /** 利用中の [CameraControl] */
+    private val cameraControlList = arrayListOf<CameraControl>()
 
     /** 生成した [SurfaceTexture] */
     private val previewSurfaceTexture = arrayListOf<SurfaceTexture>()
@@ -168,8 +168,8 @@ class MainActivity : ComponentActivity(), SurfaceTexture.OnFrameAvailableListene
         imageReader?.close()
         glSurfaceList.forEach { it.release() }
         glSurfaceList.clear()
-        cameraItemList.forEach { it.destroy() }
-        cameraItemList.clear()
+        cameraControlList.forEach { it.destroy() }
+        cameraControlList.clear()
         if (isRecording) {
             mediaRecorder?.stop()
         }
@@ -283,11 +283,11 @@ class MainActivity : ComponentActivity(), SurfaceTexture.OnFrameAvailableListene
 
             // カメラを開く
             val (backCameraId, frontCameraId) = CameraTool.getCameraId(this@MainActivity)
-            cameraItemList += CameraItem(this@MainActivity, backCameraId, Surface(mainSurfaceTexture[0]), Surface(mainSurfaceTexture[1]))
-            cameraItemList += CameraItem(this@MainActivity, frontCameraId, Surface(subSurfaceTexture[0]), Surface(subSurfaceTexture[1]))
-            cameraItemList.forEach { it.openCamera() }
+            cameraControlList += CameraControl(this@MainActivity, backCameraId, Surface(mainSurfaceTexture[0]), Surface(mainSurfaceTexture[1]))
+            cameraControlList += CameraControl(this@MainActivity, frontCameraId, Surface(subSurfaceTexture[0]), Surface(subSurfaceTexture[1]))
+            cameraControlList.forEach { it.openCamera() }
             // プレビューする
-            cameraItemList.forEach { it.startCamera() }
+            cameraControlList.forEach { it.startCamera() }
 
             // OpenGL のレンダリングを行う
             // isActive でこの cameraJob が終了されるまでループし続ける
@@ -298,7 +298,7 @@ class MainActivity : ComponentActivity(), SurfaceTexture.OnFrameAvailableListene
                 // OpenGL の描画よりも onFrameAvailable の更新のほうが早い？ため、更新が追いついてしまう
                 // そのため、消費したフレームとまだ消費していないフレームを比較するようにした
                 // https://stackoverflow.com/questions/14185661
-                if (unUsedFrameCount != usedFrameCount) {
+                if (unUsedFrameCount != usedFrameCount && isActive) {
                     glSurfaceList.forEach {
                         it.makeCurrent() // 多分いる
                         it.drawFrame()

@@ -3,8 +3,10 @@ package io.github.takusan23.multicamera
 import android.annotation.SuppressLint
 import android.content.Context
 import android.hardware.camera2.CameraCaptureSession
+import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
 import android.view.Surface
@@ -20,7 +22,7 @@ import kotlin.coroutines.suspendCoroutine
  * @param previewSurface プレビューSurface
  * @param captureSurface 撮影、録画 用Surface
  */
-class CameraItem(
+class CameraControl(
     context: Context,
     private val cameraId: String,
     private val previewSurface: Surface,
@@ -41,6 +43,9 @@ class CameraItem(
         val captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
             addTarget(previewSurface)
             addTarget(captureSurface)
+            //set(CaptureRequest.CONTROL_ZOOM_RATIO, 5f)
+//            println(cameraManager.getCameraCharacteristics(cameraId).get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE))
+
         }.build()
         val outputList = buildList {
             add(OutputConfiguration(previewSurface))
