@@ -93,15 +93,15 @@ class CameraControl(
     @SuppressLint("MissingPermission")
     private suspend fun waitOpenCamera() = suspendCoroutine {
         cameraManager.openCamera(cameraId, cameraExecutor, object : CameraDevice.StateCallback() {
-            override fun onOpened(camera: CameraDevice?) {
+            override fun onOpened(camera: CameraDevice) {
                 it.resume(camera)
             }
 
-            override fun onDisconnected(camera: CameraDevice?) {
+            override fun onDisconnected(camera: CameraDevice) {
                 // do nothing
             }
 
-            override fun onError(camera: CameraDevice?, error: Int) {
+            override fun onError(camera: CameraDevice, error: Int) {
                 // do nothing
             }
         })

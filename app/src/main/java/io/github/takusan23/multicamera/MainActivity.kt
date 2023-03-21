@@ -348,8 +348,8 @@ class MainActivity : ComponentActivity(), SurfaceTexture.OnFrameAvailableListene
                         MediaStore.Video.Media.DISPLAY_NAME to saveVideoFile?.name,
                         MediaStore.Video.Media.RELATIVE_PATH to "${Environment.DIRECTORY_MOVIES}/ArisaDroid"
                     )
-                    contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, contentValues).also { uri ->
-                        contentResolver.openOutputStream(uri).use { outputStream ->
+                    contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, contentValues)?.also { uri ->
+                        contentResolver.openOutputStream(uri)?.use { outputStream ->
                             saveVideoFile?.inputStream()?.use { inputStream ->
                                 inputStream.copyTo(outputStream)
                             }
