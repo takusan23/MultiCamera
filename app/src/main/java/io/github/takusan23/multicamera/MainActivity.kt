@@ -56,7 +56,8 @@ class MainActivity : ComponentActivity(), SurfaceTexture.OnFrameAvailableListene
 
     private val permissionRequest = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         if (it.all { it.value }) {
-            setup()
+            // onResume で代替
+            // setup()
         }
     }
 
@@ -203,6 +204,7 @@ class MainActivity : ComponentActivity(), SurfaceTexture.OnFrameAvailableListene
         cameraJob = lifecycleScope.launch(Dispatchers.IO) {
             // SurfaceView を待つ
             val previewSurface = waitSurface()
+            println("previewSurface")
             // 撮影モードに合わせた Surface を作る（静止画撮影、動画撮影）
             val captureSurface = if (currentCaptureMode == CameraCaptureMode.PICTURE) {
                 // 静止画撮影で利用する ImageReader
