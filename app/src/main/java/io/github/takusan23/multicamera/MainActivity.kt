@@ -39,6 +39,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -158,9 +160,15 @@ class MainActivity : ComponentActivity(), SurfaceTexture.OnFrameAvailableListene
         }
     }
 
+    private val mutex = Mutex()
+
     override fun onFrameAvailable(surfaceTexture: SurfaceTexture?) {
-        // 更新を通知するため、値を更新する
-        unUsedFrameCount++
+        lifecycleScope.launch {
+            mutex.withLock {
+                // 更新を通知するため、値を更新する
+                unUsedFrameCount++
+            }
+        }
     }
 
     override fun onResume() {
@@ -328,7 +336,9 @@ class MainActivity : ComponentActivity(), SurfaceTexture.OnFrameAvailableListene
                         it.drawFrame()
                         it.swapBuffers()
                     }
-                    usedFrameCount += 2 // メイン映像とサブ映像で2つ
+                    mutex.withLock {
+                        usedFrameCount += 2 // メイン映像とサブ映像で2つ
+                    }
                 }
             }
         }
@@ -387,7 +397,7 @@ class MainActivity : ComponentActivity(), SurfaceTexture.OnFrameAvailableListene
                     MediaStore.Images.Media.RELATIVE_PATH to "${Environment.DIRECTORY_PICTURES}/ArisaDroid"
                 )
                 val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues) ?: return@launch
-                contentResolver.openOutputStream(uri).use { outputStream ->
+                contentResolver.openOutputStream(uri)?.use { outputStream ->
                     editBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
                 }
                 editBitmap.recycle()
